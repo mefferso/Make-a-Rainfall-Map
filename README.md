@@ -22,6 +22,10 @@ Open the site, select a start date and end date (or set start + number of days),
 - **Download PNG** creates a clean map with state/county boundaries and legend.
 - The map is clipped to Louisiana and Mississippi.
 
+## First-time GitHub Pages setup
+
+For a new repository, enable Pages once at **Settings → Pages → Build and deployment → Source → GitHub Actions**. The included workflow deploys the site automatically after that setting is enabled.
+
 ## Sources
 
 - NWS National Water Prediction Service precipitation archive: https://water.noaa.gov/about/precipitation-data-access
