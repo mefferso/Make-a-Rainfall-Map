@@ -26,3 +26,11 @@ test('basemap tiles are visually subdued behind rainfall', async () => {
   const css = await read('styles.css');
   assert.match(css, /\.leaflet-tile-pane\s*\{[^}]*filter:/s);
 });
+
+test('Leaflet CSS uses the official 1.9.4 SRI hash', async () => {
+  const html = await read('index.html');
+  assert.match(
+    html,
+    /leaflet@1\.9\.4\/dist\/leaflet\.css[^>]+integrity=["']sha256-p4NxAoJBhIIN\+hmNHrzRCf9tD\/miZyoHS5obTRR9BMY=["']/
+  );
+});
