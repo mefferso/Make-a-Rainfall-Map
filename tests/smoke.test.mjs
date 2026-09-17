@@ -17,6 +17,38 @@ test('map runtime swaps to a keyless OSM basemap and stabilizes first fit', asyn
   assert.match(runtime, /maxBounds/);
 });
 
+test('runtime replacement keeps Leaflet tile subdomains valid', async () => {
+  const runtime = (await read('map-runtime.js')).replace("await import('./app.js');", '');
+  const originalWindow = globalThis.window;
+  const calls = [];
+
+  globalThis.window = {
+    L: {
+      tileLayer(url, options) {
+        // Leaflet 1.9.4 reads this value for every tile URL, even without {s}.
+        const subdomainCount = options.subdomains.length;
+        calls.push({ url, options, subdomainCount });
+        return { addTo() {} };
+      },
+      map() {},
+    },
+  };
+
+  try {
+    await import(`data:text/javascript,${encodeURIComponent(runtime)}#runtime-test`);
+    globalThis.window.L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      { subdomains: 'abcd', maxZoom: 20 }
+    );
+
+    assert.equal(calls[0].url, 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+    assert.ok(calls[0].subdomainCount > 0);
+  } finally {
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+  }
+});
+
 test('production HTML no longer connects directly to CARTO', async () => {
   const html = await read('index.html');
   assert.doesNotMatch(html, /cartocdn/i);

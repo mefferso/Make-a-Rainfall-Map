@@ -9,7 +9,6 @@ L.tileLayer = function patchedTileLayer(url, options = {}) {
   if (typeof url === 'string' && url.includes('basemaps.cartocdn.com')) {
     return originalTileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       ...options,
-      subdomains: undefined,
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors',
     });
