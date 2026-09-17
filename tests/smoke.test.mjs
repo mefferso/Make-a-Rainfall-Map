@@ -22,3 +22,8 @@ test('production HTML no longer preconnects to CARTO', async () => {
   const html = await read('index.html');
   assert.doesNotMatch(html, /cartocdn/i);
 });
+
+test('basemap tiles are visually subdued behind rainfall', async () => {
+  const css = await read('styles.css');
+  assert.match(css, /\.leaflet-tile-pane\s*\{[^}]*filter:/s);
+});
