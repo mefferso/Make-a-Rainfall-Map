@@ -390,16 +390,6 @@ function renderRainfallCanvas(grid) {
     image.data[p + 3] = 220;
   }
   ctx.putImageData(image, 0, 0);
-
-  if (stateGeoJson) {
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.fillStyle = '#fff';
-    drawGeoJson(ctx, stateGeoJson, coord => [
-      ((coord[0] - DISPLAY_BOUNDS.west) / (DISPLAY_BOUNDS.east - DISPLAY_BOUNDS.west)) * TARGET_WIDTH,
-      ((DISPLAY_BOUNDS.north - coord[1]) / (DISPLAY_BOUNDS.north - DISPLAY_BOUNDS.south)) * TARGET_HEIGHT,
-    ], true);
-    ctx.globalCompositeOperation = 'source-over';
-  }
   return canvas;
 }
 

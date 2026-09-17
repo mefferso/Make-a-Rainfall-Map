@@ -17,6 +17,12 @@ test('production HTML cache-busts the runtime with its content hash', async () =
   assert.match(html, new RegExp(`src=["']map-runtime\\.js\\?v=${hash}["']`));
 });
 
+test('map runtime cache-busts app.js with its content hash', async () => {
+  const [runtime, app] = await Promise.all([read('map-runtime.js'), read('app.js')]);
+  const hash = createHash('sha256').update(app).digest('hex').slice(0, 8);
+  assert.match(runtime, new RegExp(`import\\(["']\\./app\\.js\\?v=${hash}["']\\)`));
+});
+
 test('map runtime swaps to a keyless OSM basemap and stabilizes first fit', async () => {
   const runtime = await read('map-runtime.js');
   assert.match(runtime, /tile\.openstreetmap\.org/);
@@ -25,7 +31,10 @@ test('map runtime swaps to a keyless OSM basemap and stabilizes first fit', asyn
 });
 
 test('runtime replacement keeps Leaflet tile subdomains valid', async () => {
-  const runtime = (await read('map-runtime.js')).replace("await import('./app.js');", '');
+  const runtime = (await read('map-runtime.js')).replace(
+    /await import\(["']\.\/app\.js(?:\?v=[^"']+)?["']\);/,
+    ''
+  );
   const originalWindow = globalThis.window;
   const calls = [];
 
@@ -64,6 +73,16 @@ test('production HTML no longer connects directly to CARTO', async () => {
 test('basemap tiles are visually subdued behind rainfall', async () => {
   const css = await read('styles.css');
   assert.match(css, /\.leaflet-tile-pane\s*\{[^}]*filter:/s);
+});
+
+test('rainfall rendering does not intersect the two state masks', async () => {
+  const app = await read('app.js');
+  const start = app.indexOf('function renderRainfallCanvas');
+  const end = app.indexOf('function updateRainfallLayer');
+  assert.ok(start >= 0 && end > start);
+
+  const renderer = app.slice(start, end);
+  assert.doesNotMatch(renderer, /destination-in/);
 });
 
 test('Leaflet CSS uses the official 1.9.4 SRI hash', async () => {

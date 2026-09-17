@@ -48,4 +48,4 @@ L.map = function patchedMapFactory(id, options = {}) {
   return map;
 };
 
-await import('./app.js');
+await import('./app.js?v=2adbcc3a');
