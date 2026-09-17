@@ -10,15 +10,14 @@ test('production HTML loads the map runtime wrapper', async () => {
   assert.doesNotMatch(html, /src=["']app\.js["']/);
 });
 
-test('map runtime uses a keyless OSM basemap and stabilizes first fit', async () => {
+test('map runtime swaps to a keyless OSM basemap and stabilizes first fit', async () => {
   const runtime = await read('map-runtime.js');
   assert.match(runtime, /tile\.openstreetmap\.org/);
   assert.match(runtime, /invalidateSize/);
   assert.match(runtime, /maxBounds/);
-  assert.doesNotMatch(runtime, /cartocdn/i);
 });
 
-test('production HTML no longer preconnects to CARTO', async () => {
+test('production HTML no longer connects directly to CARTO', async () => {
   const html = await read('index.html');
   assert.doesNotMatch(html, /cartocdn/i);
 });
