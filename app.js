@@ -80,7 +80,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 map.fitBounds([[DISPLAY_BOUNDS.south, DISPLAY_BOUNDS.west], [DISPLAY_BOUNDS.north, DISPLAY_BOUNDS.east]], { padding: [12, 12] });
 renderLegend();
 initializeDates();
-loadBoundaries();
+const boundariesReady = loadBoundaries();
 
 els.start.addEventListener('change', () => syncEndFromDays());
 els.days.addEventListener('change', () => syncEndFromDays());
@@ -142,6 +142,8 @@ async function onGenerate(event) {
     }
 
     if (serial !== requestSerial) return;
+    await boundariesReady;
+    maskGridToStates(grid);
     const max = finiteMax(grid);
     const rasterCanvas = renderRainfallCanvas(grid);
     updateRainfallLayer(rasterCanvas);
@@ -152,7 +154,9 @@ async function onGenerate(event) {
     els.download.disabled = false;
 
     els.period.textContent = `${formatDate(start)} – ${formatDate(end)} · ${days} day${days === 1 ? '' : 's'}`;
-    els.source.textContent = chunks.map(c => sourceDisplayName(c.source)).filter((v, i, a) => a.indexOf(v) === i).join(' + ');
+    const sourceNames = chunks.map(c => sourceDisplayName(c.source)).filter((v, i, a) => a.indexOf(v) === i);
+    const hasQpe = chunks.some(c => c.source === 'stage3' || c.source === 'stage4');
+    els.source.textContent = `${sourceNames.join(' + ')}${hasQpe ? ' · QPE periods end 12Z' : ''}`;
     els.max.textContent = Number.isFinite(max) ? `Max ${max.toFixed(2)} in` : 'No valid data';
   } catch (error) {
     console.error(error);
@@ -351,6 +355,23 @@ function resampleRegularLatLonInto(source, lat, lon, output) {
   }
 }
 
+function maskGridToStates(grid) {
+  if (!stateGeoJson) return;
+  const mask = document.createElement('canvas');
+  mask.width = TARGET_WIDTH;
+  mask.height = TARGET_HEIGHT;
+  const ctx = mask.getContext('2d', { alpha: true });
+  ctx.fillStyle = '#fff';
+  drawGeoJson(ctx, stateGeoJson, coord => [
+    ((coord[0] - DISPLAY_BOUNDS.west) / (DISPLAY_BOUNDS.east - DISPLAY_BOUNDS.west)) * TARGET_WIDTH,
+    ((DISPLAY_BOUNDS.north - coord[1]) / (DISPLAY_BOUNDS.north - DISPLAY_BOUNDS.south)) * TARGET_HEIGHT,
+  ], true);
+  const pixels = ctx.getImageData(0, 0, TARGET_WIDTH, TARGET_HEIGHT).data;
+  for (let i = 0; i < grid.length; i++) {
+    if (pixels[i * 4 + 3] < 128) grid[i] = Number.NaN;
+  }
+}
+
 function renderRainfallCanvas(grid) {
   const canvas = document.createElement('canvas');
   canvas.width = TARGET_WIDTH;
@@ -513,6 +534,10 @@ function updateProbe(event) {
   const x = clamp(Math.floor(((lon - DISPLAY_BOUNDS.west) / (DISPLAY_BOUNDS.east - DISPLAY_BOUNDS.west)) * TARGET_WIDTH), 0, TARGET_WIDTH - 1);
   const y = clamp(Math.floor(((DISPLAY_BOUNDS.north - lat) / (DISPLAY_BOUNDS.north - DISPLAY_BOUNDS.south)) * TARGET_HEIGHT), 0, TARGET_HEIGHT - 1);
   const value = latestGrid[y * TARGET_WIDTH + x];
+  if (!Number.isFinite(value)) {
+    els.probe.classList.add('hidden');
+    return;
+  }
   els.probeValue.textContent = `${value.toFixed(2)} in`;
   els.probeCoords.textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
   els.probe.classList.remove('hidden');
