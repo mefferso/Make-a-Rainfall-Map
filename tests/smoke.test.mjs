@@ -1,13 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('production HTML loads the map runtime wrapper', async () => {
   const html = await read('index.html');
-  assert.match(html, /src=["']map-runtime\.js["']/);
+  assert.match(html, /src=["']map-runtime\.js(?:\?[^"']+)?["']/);
   assert.doesNotMatch(html, /src=["']app\.js["']/);
+});
+
+test('production HTML cache-busts the runtime with its content hash', async () => {
+  const [html, runtime] = await Promise.all([read('index.html'), read('map-runtime.js')]);
+  const hash = createHash('sha256').update(runtime).digest('hex').slice(0, 8);
+  assert.match(html, new RegExp(`src=["']map-runtime\\.js\\?v=${hash}["']`));
 });
 
 test('map runtime swaps to a keyless OSM basemap and stabilizes first fit', async () => {
